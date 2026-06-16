@@ -24,6 +24,8 @@ from database import engine
 from models import Base
 from models import Scan, Host, OpenPort
 from tasks import run_scan
+import asyncio
+from simulation import cluster_manager, simulation_loop
 
 # -------------------- App --------------------
 
@@ -35,6 +37,11 @@ app = FastAPI(
 
 # -------------------- Create DB Tables --------------------
 Base.metadata.create_all(bind=engine)
+
+# -------------------- Startup Event --------------------
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(simulation_loop())
 
 # -------------------- Static & Templates --------------------
 
@@ -167,3 +174,30 @@ def get_scan_results(
         "created_at": scan.created_at,
         "results": results
     }
+
+# -------------------- SIMULATION ENDPOINTS --------------------
+
+@app.get("/api/simulation/status")
+def sim_status():
+    return cluster_manager.get_status()
+
+@app.post("/api/simulation/start")
+def sim_start():
+    cluster_manager.is_running = True
+    return {"status": "started"}
+
+@app.post("/api/simulation/stop")
+def sim_stop():
+    cluster_manager.is_running = False
+    return {"status": "stopped"}
+
+class TrafficRequest(BaseModel):
+    connections: int = Field(..., gt=0)
+
+@app.post("/api/simulation/traffic")
+def sim_traffic(req: TrafficRequest):
+    if not cluster_manager.is_running:
+        raise HTTPException(status_code=400, detail="Simulation is not running")
+    cluster_manager.route_traffic(req.connections)
+    return {"status": "traffic sent", "connections": req.connections}
+

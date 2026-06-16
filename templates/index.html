@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cloud Based Network Scanner</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=2">
 </head>
 <body>
 
@@ -116,8 +116,29 @@
 []
         </pre>
     </div>
+
+    <!-- Simulation Dashboard -->
+    <div class="card" id="simCard">
+        <h2>⚖️ Load Balancer & Auto-Scaling Simulation</h2>
+        <p style="color: var(--text-muted); margin-bottom: 15px;">Simulate incoming network scanning requests to see how the load balancer distributes traffic and how the system auto-scales servers based on CPU load.</p>
+        
+        <div class="sim-controls" style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button id="simStartBtn" onclick="toggleSimulation()" style="flex: 1;">Start Simulation</button>
+            <button id="simTrafficBtn" onclick="sendTraffic()" style="flex: 1; background: var(--secondary-color);" disabled>Send Traffic (100 reqs)</button>
+        </div>
+
+        <div class="sim-stats" style="display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.5); border-radius: 8px;">
+            <div><strong>Status:</strong> <span id="simStatusText">Stopped</span></div>
+            <div><strong>Total Requests:</strong> <span id="simTotalReqs">0</span></div>
+            <div><strong>Avg CPU:</strong> <span id="simAvgCpu">0%</span></div>
+        </div>
+
+        <div id="simServersGrid" class="sim-grid">
+            <!-- Server cards will be injected here -->
+        </div>
+    </div>
 </div>
 
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=2"></script>
 </body>
 </html>

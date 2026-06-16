@@ -207,3 +207,98 @@ async function fetchResults() {
         displayMessage(err.message, "error");
     }
 }
+
+/* ---------- SIMULATION LOGIC ---------- */
+let simPollInterval = null;
+let isSimRunning = false;
+
+async function toggleSimulation() {
+    const btn = document.getElementById("simStartBtn");
+    const trafficBtn = document.getElementById("simTrafficBtn");
+    
+    try {
+        if (!isSimRunning) {
+            await fetch("/api/simulation/start", { method: "POST" });
+            isSimRunning = true;
+            btn.innerText = "Stop Simulation";
+            btn.style.background = "#ef4444"; // Red
+            trafficBtn.disabled = false;
+            
+            // Start polling
+            if (!simPollInterval) {
+                simPollInterval = setInterval(fetchSimStatus, 2000);
+            }
+        } else {
+            await fetch("/api/simulation/stop", { method: "POST" });
+            isSimRunning = false;
+            btn.innerText = "Start Simulation";
+            btn.style.background = "var(--primary-color)";
+            trafficBtn.disabled = true;
+            
+            if (simPollInterval) {
+                clearInterval(simPollInterval);
+                simPollInterval = null;
+            }
+            document.getElementById("simStatusText").innerText = "Stopped";
+        }
+    } catch (e) {
+        console.error("Simulation toggle error", e);
+    }
+}
+
+async function sendTraffic() {
+    try {
+        await fetch("/api/simulation/traffic", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ connections: 100 })
+        });
+    } catch (e) {
+        console.error("Simulation traffic error", e);
+    }
+}
+
+async function fetchSimStatus() {
+    try {
+        const response = await fetch("/api/simulation/status");
+        if (!response.ok) return;
+        const data = await response.json();
+        
+        // Update Stats
+        document.getElementById("simStatusText").innerText = data.is_running ? "Running 🟢" : "Stopped 🔴";
+        document.getElementById("simTotalReqs").innerText = data.total_requests;
+        document.getElementById("simAvgCpu").innerText = data.average_cpu + "%";
+        
+        // Render Servers
+        const grid = document.getElementById("simServersGrid");
+        grid.innerHTML = ""; // Clear existing
+        
+        data.servers.forEach(server => {
+            const cpuColor = server.cpu > 80 ? "#ef4444" : (server.cpu > 50 ? "#f59e0b" : "var(--primary-color)");
+            const memColor = server.memory > 80 ? "#ef4444" : "var(--secondary-color)";
+            
+            const card = document.createElement("div");
+            card.className = "server-card";
+            card.innerHTML = `
+                <h4>${server.id}</h4>
+                <div class="server-stat"><span>Conns:</span> <strong>${server.connections}</strong></div>
+                <div class="server-stat"><span>CPU:</span> <span>${server.cpu}%</span></div>
+                <div class="progress-bg">
+                    <div class="progress-bar" style="width: ${server.cpu}%; background: ${cpuColor}"></div>
+                </div>
+                <div class="server-stat"><span>RAM:</span> <span>${server.memory}%</span></div>
+                <div class="progress-bg">
+                    <div class="progress-bar" style="width: ${server.memory}%; background: ${memColor}"></div>
+                </div>
+                <div class="server-stat" style="margin-top:10px; font-size:0.8rem; color:#6b7280;">
+                    Storage: ${server.free_storage}GB free / ${server.total_storage}GB
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+        
+    } catch (e) {
+        console.error("Simulation status fetch error", e);
+    }
+}
+
