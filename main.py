@@ -177,27 +177,19 @@ def get_scan_results(
 
 # -------------------- SIMULATION ENDPOINTS --------------------
 
-@app.get("/api/simulation/status")
-def sim_status():
-    return cluster_manager.get_status()
-
-@app.post("/api/simulation/start")
-def sim_start():
-    cluster_manager.is_running = True
-    return {"status": "started"}
-
-@app.post("/api/simulation/stop")
-def sim_stop():
-    cluster_manager.is_running = False
-    return {"status": "stopped"}
-
 class TrafficRequest(BaseModel):
     connections: int = Field(..., gt=0)
+    source: str = Field(..., example="Host Machine") # Tracks if it's Host or VM
 
 @app.post("/api/simulation/traffic")
 def sim_traffic(req: TrafficRequest):
     if not cluster_manager.is_running:
         raise HTTPException(status_code=400, detail="Simulation is not running")
+    
+    # Simulate the Load Balancer routing the traffic equally
+    for i in range(req.connections):
+        target_port = 5001 if i % 2 == 0 else 5002
+        print(f"[LOAD BALANCER] Routed 1 request from [{req.source}] to Backend Instance on Port {target_port}")
+        
     cluster_manager.route_traffic(req.connections)
-    return {"status": "traffic sent", "connections": req.connections}
-
+    return {"status": "traffic balanced", "source": req.source, "connections": req.connections}

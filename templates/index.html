@@ -1,144 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cloud Based Network Scanner</title>
     <link rel="stylesheet" href="/static/style.css?v=2">
 </head>
+
 <body>
 
-<div class="container">
-    <h1>🛰️ Cloud Based Network Scanner</h1>
-    
-    <div class="project-info">
-        <p><strong>Course:</strong> Cloud Computing | <strong>Section:</strong> 4</p>
-        <p><strong>Submitted to:</strong> Mam Munam Javed</p>
-        <div class="devs">
-            <p><strong>Developed by:</strong></p>
-            <p>Muhammad Uzair Toor (L) - BCS223186</p>
-            <p>Ayesha Nadeem Chughtai - BCSP243010</p>
-            <p>Ayesha Noor - BCSP243015</p>
+    <div class="container">
+        <h1>🛰️ Cloud Based Network Scanner</h1>
+
+        <div class="project-info">
+            <p><strong>Course:</strong> Cloud Computing | <strong>Section:</strong> 4</p>
+            <p><strong>Submitted to:</strong> Mam Munam Javed</p>
+            <div class="devs">
+                <p><strong>Developed by:</strong></p>
+                <p>Muhammad Uzair Toor (L) - BCS223186</p>
+                <p>Ayesha Nadeem Chughtai - BCSP243010</p>
+                <p>Ayesha Noor - BCSP243015</p>
+            </div>
+        </div>
+
+        <div class="notice">
+            <strong>Public Demo Notice:</strong>
+            ARP-based scanning works only on <b>local networks</b>.
+            When running in cloud or public deployments, enable
+            <b>Demo Mode</b> to view simulated scan results.
+        </div>
+
+        <div class="card">
+            <h2>☁️ Cloud Computing Concepts Covered</h2>
+            <ul style="line-height: 1.8; margin-top: 10px; padding-left: 20px;">
+                <li style="margin-bottom: 10px;"><strong>PaaS (Platform as a Service) Deployment:</strong> The
+                    application is designed to be deployed on managed cloud platforms (like Render), abstracting
+                    infrastructure management (VMs) and implicitly utilizing platform load balancing and TLS
+                    termination.</li>
+                <li style="margin-bottom: 10px;"><strong>Asynchronous Processing & Decoupling (Scaling):</strong>
+                    Network and port scanning workloads are offloaded to background tasks to keep the main HTTP API
+                    non-blocking and highly responsive.</li>
+                <li style="margin-bottom: 10px;"><strong>Environment Awareness & Cloud Security:</strong> The
+                    application programmatically detects if it is running in a public cloud and gracefully disables
+                    restricted operations (like Layer-2 ARP scans) to comply with multi-tenant security rules.</li>
+                <li><strong>Database Abstraction (Data Migration):</strong> By using SQLAlchemy ORM, the application’s
+                    logic is decoupled from the underlying database engine, enabling seamless migration from local
+                    SQLite to a managed cloud database without rewriting queries.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>🚀 Start New Scan</h2>
+
+            <div class="form-group">
+                <label for="ipRange">IP Range (CIDR or single IP)</label>
+                <input type="text" id="ipRange" placeholder="192.168.1.0/24" required>
+                <small class="hint">
+                    Example: <code>192.168.1.0/24</code> or <code>192.168.1.10</code>
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label for="gateway">Gateway (Optional)</label>
+                <input type="text" id="gateway" placeholder="192.168.1.1">
+                <small class="hint">
+                    Must belong to the selected IP range
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label for="ports">Ports (comma-separated)</label>
+                <input type="text" id="ports" placeholder="22,80,443">
+                <small class="hint">
+                    Leave empty to use default ports
+                </small>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="demoMode" checked>
+                <label for="demoMode">
+                    Demo mode (Recommended for cloud / public testing)
+                </label>
+            </div>
+
+            <button id="startScanButton" onclick="startScan()">
+                Start Scan
+            </button>
+
+            <div id="scanMessage" class="message"></div>
+        </div>
+
+        <div class="card">
+            <h2>📊 Scan Status</h2>
+
+            <div id="statusBadge" class="status-badge status-idle">
+                Idle
+            </div>
+
+            <div id="spinner" class="spinner hidden"></div>
+
+            <pre id="statusOutput"></pre>
+        </div>
+
+        <div class="card">
+            <h2>📄 Scan Results</h2>
+            <pre id="resultsOutput">[]</pre>
+        </div>
+
+        <div class="card" id="simCard">
+            <h2>⚖️ Load Balancer & Auto-Scaling Simulation</h2>
+            <p style="color: var(--text-muted); margin-bottom: 15px;">Simulate incoming network scanning requests to see
+                how the load balancer distributes traffic and how the system auto-scales servers based on CPU load.</p>
+
+            <div class="sim-controls" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button id="simStartBtn" onclick="toggleSimulation()" style="flex: 1;">Start Simulation</button>
+                <button id="simTrafficBtn" onclick="sendTraffic()" style="flex: 1; background: var(--secondary-color);"
+                    disabled>Send Traffic (100 reqs)</button>
+            </div>
+
+            <div class="sim-stats"
+                style="display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.5); border-radius: 8px;">
+                <div><strong>Status:</strong> <span id="simStatusText">Stopped</span></div>
+                <div><strong>Total Requests:</strong> <span id="simTotalReqs">0</span></div>
+                <div><strong>Avg CPU:</strong> <span id="simAvgCpu">0%</span></div>
+            </div>
+
+            <div id="simServersGrid" class="sim-grid">
+            </div>
+        </div>
+
+        <div class="card" style="border-top: 4px solid #007bff;">
+            <h2>🖥️ Multi-Machine Environment Traffic Generator</h2>
+            <p style="color: var(--text-muted); margin-bottom: 15px;">Generate independent traffic vectors from isolated
+                target environments to evaluate equal round-robin distribution metrics.</p>
+
+            <div style="display: flex; gap: 15px;">
+                <button onclick="sendMachineTraffic('Host Machine')"
+                    style="flex: 1; padding: 12px; background: #28a745; color: white; font-weight: bold; border: none; border-radius: 6px; cursor: pointer;">
+                    🚀 Fire Traffic from Host Machine
+                </button>
+                <button onclick="sendMachineTraffic('Virtual Machine')"
+                    style="flex: 1; padding: 12px; background: #007bff; color: white; font-weight: bold; border: none; border-radius: 6px; cursor: pointer;">
+                    💻 Fire Traffic from Virtual Machine
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Global Notice -->
-    <div class="notice">
-        <strong>Public Demo Notice:</strong>
-        ARP-based scanning works only on <b>local networks</b>.
-        When running in cloud or public deployments, enable
-        <b>Demo Mode</b> to view simulated scan results.
-    </div>
+    <script src="/static/app.js?v=2"></script>
 
-    <!-- Cloud Concepts Covered -->
-    <div class="card">
-        <h2>☁️ Cloud Computing Concepts Covered</h2>
-        <ul style="line-height: 1.8; margin-top: 10px; padding-left: 20px;">
-            <li style="margin-bottom: 10px;"><strong>PaaS (Platform as a Service) Deployment:</strong> The application is designed to be deployed on managed cloud platforms (like Render), abstracting infrastructure management (VMs) and implicitly utilizing platform load balancing and TLS termination.</li>
-            <li style="margin-bottom: 10px;"><strong>Asynchronous Processing & Decoupling (Scaling):</strong> Network and port scanning workloads are offloaded to background tasks to keep the main HTTP API non-blocking and highly responsive.</li>
-            <li style="margin-bottom: 10px;"><strong>Environment Awareness & Cloud Security:</strong> The application programmatically detects if it is running in a public cloud and gracefully disables restricted operations (like Layer-2 ARP scans) to comply with multi-tenant security rules.</li>
-            <li><strong>Database Abstraction (Data Migration):</strong> By using SQLAlchemy ORM, the application’s logic is decoupled from the underlying database engine, enabling seamless migration from local SQLite to a managed cloud database without rewriting queries.</li>
-        </ul>
-    </div>
-
-    <!-- Scan Form -->
-    <div class="card">
-        <h2>🚀 Start New Scan</h2>
-
-        <div class="form-group">
-            <label for="ipRange">IP Range (CIDR or single IP)</label>
-            <input
-                type="text"
-                id="ipRange"
-                placeholder="192.168.1.0/24"
-                required
-            >
-            <small class="hint">
-                Example: <code>192.168.1.0/24</code> or <code>192.168.1.10</code>
-            </small>
-        </div>
-
-        <div class="form-group">
-            <label for="gateway">Gateway (Optional)</label>
-            <input
-                type="text"
-                id="gateway"
-                placeholder="192.168.1.1"
-            >
-            <small class="hint">
-                Must belong to the selected IP range
-            </small>
-        </div>
-
-        <div class="form-group">
-            <label for="ports">Ports (comma-separated)</label>
-            <input
-                type="text"
-                id="ports"
-                placeholder="22,80,443"
-            >
-            <small class="hint">
-                Leave empty to use default ports
-            </small>
-        </div>
-
-        <div class="checkbox-group">
-            <input type="checkbox" id="demoMode" checked>
-            <label for="demoMode">
-                Demo mode (Recommended for cloud / public testing)
-            </label>
-        </div>
-
-        <button id="startScanButton" onclick="startScan()">
-            Start Scan
-        </button>
-
-        <div id="scanMessage" class="message"></div>
-    </div>
-
-    <!-- Status -->
-    <div class="card">
-        <h2>📊 Scan Status</h2>
-
-        <div id="statusBadge" class="status-badge status-idle">
-            Idle
-        </div>
-
-        <div id="spinner" class="spinner hidden"></div>
-
-        <pre id="statusOutput"></pre>
-    </div>
-
-    <!-- Results -->
-    <div class="card">
-        <h2>📄 Scan Results</h2>
-        <pre id="resultsOutput">
-[]
-        </pre>
-    </div>
-
-    <!-- Simulation Dashboard -->
-    <div class="card" id="simCard">
-        <h2>⚖️ Load Balancer & Auto-Scaling Simulation</h2>
-        <p style="color: var(--text-muted); margin-bottom: 15px;">Simulate incoming network scanning requests to see how the load balancer distributes traffic and how the system auto-scales servers based on CPU load.</p>
-        
-        <div class="sim-controls" style="display: flex; gap: 10px; margin-bottom: 20px;">
-            <button id="simStartBtn" onclick="toggleSimulation()" style="flex: 1;">Start Simulation</button>
-            <button id="simTrafficBtn" onclick="sendTraffic()" style="flex: 1; background: var(--secondary-color);" disabled>Send Traffic (100 reqs)</button>
-        </div>
-
-        <div class="sim-stats" style="display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.5); border-radius: 8px;">
-            <div><strong>Status:</strong> <span id="simStatusText">Stopped</span></div>
-            <div><strong>Total Requests:</strong> <span id="simTotalReqs">0</span></div>
-            <div><strong>Avg CPU:</strong> <span id="simAvgCpu">0%</span></div>
-        </div>
-
-        <div id="simServersGrid" class="sim-grid">
-            <!-- Server cards will be injected here -->
-        </div>
-    </div>
-</div>
-
-<script src="/static/app.js?v=2"></script>
+    <script>
+        function sendMachineTraffic(machineSource) {
+            // First, automatically ensure the cluster background engine is initialized
+            fetch('/api/simulation/start', { method: 'POST' })
+                .then(() => {
+                    return fetch('/api/simulation/traffic', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            connections: 10,
+                            source: machineSource
+                        })
+                    });
+                })
+                .then(res => res.json())
+                .then(data => {
+                    console.log(`[OK] 10 Balanced requests forced from execution context: ${machineSource}`);
+                    // Safely update partner dashboard statistics if available
+                    if (typeof checkSimulationStatus === 'function') checkSimulationStatus();
+                })
+                .catch(err => console.error("Error communicating with simulation backend:", err));
+        }
+    </script>
 </body>
+
 </html>
